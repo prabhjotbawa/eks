@@ -11,8 +11,10 @@ variables:
 
 workflow:
   rules:
-    - if: $CI_MERGE_REQUEST_ID && $CI_MERGE_REQUEST_PROJECT_PATH == $CENTRAL_REPO
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PROJECT_PATH == $CENTRAL_REPO
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
 
 .release_rules: &release_rules
   - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PROJECT_PATH == $CENTRAL_REPO
