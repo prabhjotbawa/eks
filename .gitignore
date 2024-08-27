@@ -1,0 +1,6 @@
+.idea
+.venv
+**/.terraform
+eks/terraform.tfstate
+eks/terraform.tfstate.backup
+eks/tfplan

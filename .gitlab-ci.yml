@@ -1,0 +1,60 @@
+stages:
+  - Build
+  - Test
+  - Release
+
+variables:
+  CENTRAL_REPO: 'git@gitlab.com:tutorials7395728/eks'
+  IMAGE_TAG: ${CI_COMMIT_SHORT_SHA}-${CI_PIPELINE_ID}
+  DEV_IMG: "docker.io/prabhjotbawa/eks:$IMAGE_TAG"
+
+
+workflow:
+  rules:
+    - if: $CI_MERGE_REQUEST_ID && $CI_MERGE_REQUEST_PROJECT_PATH == $CENTRAL_REPO
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PROJECT_PATH == $CENTRAL_REPO
+
+.release_rules: &release_rules
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PROJECT_PATH == $CENTRAL_REPO
+
+
+.build_template: &build_template
+  stage: Build
+  tags: [saas-linux-medium-amd64]
+  needs: []
+
+.test_template: &test_template
+  tags: [saas-linux-medium-amd64]
+  needs: ["Build Image"]
+
+Build Image:
+  <<: *build_template
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --tag $CI_REGISTRY_IMAGE:$IMAGE_TAG .
+    - docker push $CI_REGISTRY_IMAGE:$IMAGE_TAG
+
+Run Script:
+  <<: *test_template
+  image: $CI_REGISTRY_IMAGE:$IMAGE_TAG
+  stage: Test
+  script:
+    - terraform --help
+
+Provision Infra:
+  <<: *test_template
+  image: $CI_REGISTRY_IMAGE:$IMAGE_TAG
+  stage: Release
+  rules: *release_rules
+  variables:
+    AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+    AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+
+  script:
+    - terraform init
+    - terraform plan -out=tfplan -input=false
+    - terraform show -json tfplan
+
