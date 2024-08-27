@@ -28,7 +28,9 @@ override the logs and as such as a best practice external logging solutions loki
 - cluster-autoscaler.tf: applies helm chart to crate the autoscaler
 - aws-lb.tf: creates lb, reads the polices from a json file
 - nginx-controller.tf: installs the nginx controller and an instance of the IngressClassResource which will be used to create
-a nlb balancer to manage traffic into the cluster
+a nlb balancer to manage traffic into the cluster, NLB are cost-effective and use config map to point to different services
+using the same load balancer
 Note: Typically addons like storage drivers, CNI drivers use OIDC providers to link IAM roles with service accounts however
-components like metrics server, cluster auto scaler use pod identity association
+components like metrics server, cluster auto scaler can use pod identity association to authenticate
 Control plane logs are not enabled by default, however can be enabled by setting it in `eks.tf`
+- cert-manger.tf: needed when using TLS with nginx controller to generate certs using cert-manager to encrypt the traffic

@@ -1,0 +1,87 @@
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: http-01-production
+spec:
+  acme:
+    email: your-email@devopsbyexample.com
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: http-01-production-cluster-issuer # secrets get created in cert-manager-namespace
+    solvers:
+      - http01: # two types of challenges, http-01 and dns-01. dns-01 needs a dns record to be created
+          ingress:
+            ingressClassName: external-nginx
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: 9-example
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+  namespace: 9-example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: myapp
+          image: prabhjotbawa/testapp:0.0.1-dev
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+            limits:
+              memory: 128Mi
+              cpu: 100m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp
+  namespace: 9-example
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+  selector:
+    app: myapp
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: myapp
+  namespace: 9-example
+  annotations:
+    cert-manager.io/cluster-issuer: http-01-production # points to the cluster issuer
+spec:
+  ingressClassName: external-nginx
+  rules:
+    - host: ex9.prabhjotbawa.com # Since cert-manager will check the domain, create a CNAME DNS record in Route 53 to point to the LB
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: myapp
+                port:
+                  number: 8080
+  tls: # needed for https connection, secret created and gets mounted in the nginx controller to terminate TLS connections
+    - hosts:
+        - ex9.prabhjotbawa.com
+      secretName: ex9-prabhjotbawa-com
