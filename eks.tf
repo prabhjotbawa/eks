@@ -37,6 +37,8 @@ resource "aws_eks_cluster" "eks" {
     ]
   }
 
+  # enabled_cluster_log_types = [control-plane, cloudwatch] Pushes logs to cloudwatch
+
   access_config {
     authentication_mode                         = "API"
     bootstrap_cluster_creator_admin_permissions = true
