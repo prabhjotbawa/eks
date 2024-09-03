@@ -62,6 +62,13 @@ resource "aws_iam_role" "cluster_autoscaler" {
    namespace       = "kube-system"
    service_account = "cluster-autoscaler"
    role_arn        = aws_iam_role.cluster_autoscaler.arn
+
+   lifecycle {
+     postcondition {
+       condition = self.association_id != "" # aws_eks_pod_identity_association.cluster_autoscaler.association_id
+       error_message = "A pod association id ${self.association_id} is needed to proceed, Check if pod identiy agent was installed"
+     }
+   }
  }
 
  resource "helm_release" "cluster_autoscaler" {
@@ -90,3 +97,10 @@ resource "aws_iam_role" "cluster_autoscaler" {
 
    depends_on = [helm_release.metrics_server]
  }
+
+module "eks_pod_identity_checker_scaler"{
+  count = local.pod_identity ? 1:0
+
+  source = "./modules/eks-pod-identity-check"
+  cluster_name = aws_eks_cluster.eks.name
+}

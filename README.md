@@ -30,7 +30,58 @@ override the logs and as such as a best practice external logging solutions loki
 - nginx-controller.tf: installs the nginx controller and an instance of the IngressClassResource which will be used to create
 a nlb balancer to manage traffic into the cluster, NLB are cost-effective and use config map to point to different services
 using the same load balancer
-Note: Typically addons like storage drivers, CNI drivers use OIDC providers to link IAM roles with service accounts however
-components like metrics server, cluster auto scaler can use pod identity association to authenticate
+**Note**: Typically addons like storage drivers, CNI drivers use OIDC providers to link IAM roles with service accounts however
+components like load balancer, cluster auto scaler can use pod identity association to authenticate themselves with other AWS
+services like EC2, ELB using the service accounts associated with an IAM role.
+A word about [pod identity association](pod_indentity_association.md) and also a good explanation from AWS docs can be found [here](https://aws.amazon.com/blogs/containers/amazon-eks-pod-identity-a-new-way-for-applications-on-eks-to-obtain-iam-credentials/)
 Control plane logs are not enabled by default, however can be enabled by setting it in `eks.tf`
 - cert-manger.tf: needed when using TLS with nginx controller to generate certs using cert-manager to encrypt the traffic
+
+## Debugging
+# Terraform
+- Set env vars `TF_LOG` and `TF_LOG_PATH`
+```bash
+export TF_LOG='DEBUG'
+export TF_LOG_PATH='/tmp/some_file'
+```
+Using `helm` directly
+```commandline
+helm install chart my-chart --debug
+helm  upgrade --install chart my-chart --debug
+```
+- Investigate the `.tfstate` file
+- Forward logs to tools like the ELK stack, splunk, grafana etc..
+- Use validation block, an example below:
+```terraform
+variable "instance_type" {
+  description = "Instance type t2.micro"
+  type        = string
+  default     = "t2.medium"
+ 
+  validation {
+   condition     = can(regex("^[Tt][2-3].(nano|micro|small)", var.instance_type))
+   error_message = "Invalid Instance Type name. You can only choose - t2.nano,t2.micro,t2.small"
+ }
+}
+```
+
+- For errors `Error: cannot re-use a name that is still in use`, remove the secrets that have `helm` in the name
+- To view all the values of a resource run the below command:
+```commandline
+terraform state show aws_eks_pod_identity_association.cluster_autoscaler
+```
+You an replace `aws_eks_pod_identity_association.cluster_autoscaler` with any other resource to view the details.
+
+## EKS additional charts
+Repo: https://github.com/aws/eks-charts/tree/master/stable
+It has all the details including the configuration.
+An example: https://github.com/aws/eks-charts/tree/master/stable/appmesh-prometheus#configuration
+Every chart has templated values to override deployment object since it uses jinja as the templating language. Either
+the values can be defined in `values` file or set using `set` keyword in `terraform` helm resource.
+
+## Dockerfile
+To create your own image for the test app, run
+```commandline
+docker buildx build -t image:tag . --platform=linux/amd64
+```
+Push to dockerhub to use it in the deployment

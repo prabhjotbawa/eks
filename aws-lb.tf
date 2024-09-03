@@ -19,6 +19,7 @@ data "aws_iam_policy_document" "aws_lbc" { # We can also use data resource to de
    assume_role_policy = data.aws_iam_policy_document.aws_lbc.json
  }
 
+# Can be found at: https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json
  resource "aws_iam_policy" "aws_lbc" {
    policy = file("./iam/AWSLoadBalancerController.json")
    name   = "AWSLoadBalancerController"
@@ -42,7 +43,7 @@ data "aws_iam_policy_document" "aws_lbc" { # We can also use data resource to de
    repository = "https://aws.github.io/eks-charts"
    chart      = "aws-load-balancer-controller"
    namespace  = "kube-system"
-   version    = "1.7.2"
+   version    = "1.8.2"
 
    set {
      name  = "clusterName"
@@ -56,3 +57,10 @@ data "aws_iam_policy_document" "aws_lbc" { # We can also use data resource to de
 
    depends_on = [helm_release.cluster_autoscaler]
  }
+
+module "eks_pod_identity_checker_lbc"{
+  count = local.pod_identity ? 1:0
+
+  source = "./modules/eks-pod-identity-check"
+  cluster_name = aws_eks_cluster.eks.name
+}

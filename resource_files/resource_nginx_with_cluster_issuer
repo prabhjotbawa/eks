@@ -36,7 +36,7 @@ spec:
     spec:
       containers:
         - name: myapp
-          image: prabhjotbawa/testapp:0.0.1-dev
+          image: prabhjotbawa/testapp:0.0.1
           ports:
             - name: http
               containerPort: 8080

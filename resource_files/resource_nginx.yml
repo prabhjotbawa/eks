@@ -1,3 +1,4 @@
+# curl -i --header "Host: ex8.prabhjotbawa.com" <ingress host>/about
 ---
 apiVersion: v1
 kind: Namespace
@@ -21,7 +22,7 @@ spec:
     spec:
       containers:
         - name: myapp
-          image: prabhjotbawa/testapp:0.0.1-dev
+          image: prabhjotbawa/testapp:0.0.1
           ports:
             - name: http
               containerPort: 8080
