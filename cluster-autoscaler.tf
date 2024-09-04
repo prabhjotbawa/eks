@@ -99,7 +99,7 @@ resource "aws_iam_role" "cluster_autoscaler" {
  }
 
 module "eks_pod_identity_checker_scaler"{
-  count = local.pod_identity ? 1:0
+  count = local.pod_id_chk ? 1:0
 
   source = "./modules/eks-pod-identity-check"
   cluster_name = aws_eks_cluster.eks.name

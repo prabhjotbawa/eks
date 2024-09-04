@@ -55,11 +55,12 @@ data "aws_iam_policy_document" "aws_lbc" { # We can also use data resource to de
      value = "aws-load-balancer-controller"
    }
 
-   depends_on = [helm_release.cluster_autoscaler]
+   depends_on = [helm_release.cluster_autoscaler, aws_eks_addon.pod_identity]
  }
 
+# Just to add as a check and show the usage of modules
 module "eks_pod_identity_checker_lbc"{
-  count = local.pod_identity ? 1:0
+  count = local.pod_id_chk ? 1:0
 
   source = "./modules/eks-pod-identity-check"
   cluster_name = aws_eks_cluster.eks.name

@@ -10,7 +10,7 @@ libraries, helm charts
 2 of them to route traffic in/out of the cluster
 1) Private -> Routes traffic from the NAT to the IGW for downloading packages from the internet, connected with private subnet
 2) Public -> Routes traffic from the IGW to the load balancer to communicate with ingress.
-- Load balancer
+- Load balancer routes traffic to nginx controller pod which interacts with cert manager to secure traffic
 
 ## Files
 - locals.tf: local variables
@@ -32,10 +32,29 @@ a nlb balancer to manage traffic into the cluster, NLB are cost-effective and us
 using the same load balancer
 **Note**: Typically addons like storage drivers, CNI drivers use OIDC providers to link IAM roles with service accounts however
 components like load balancer, cluster auto scaler can use pod identity association to authenticate themselves with other AWS
-services like EC2, ELB using the service accounts associated with an IAM role.
+services like EC2, ELB using the service accounts associated with an IAM role however pod identity association is newer and seems 
+to be simpler and a good replacement.
 A word about [pod identity association](pod_indentity_association.md) and also a good explanation from AWS docs can be found [here](https://aws.amazon.com/blogs/containers/amazon-eks-pod-identity-a-new-way-for-applications-on-eks-to-obtain-iam-credentials/)
 Control plane logs are not enabled by default, however can be enabled by setting it in `eks.tf`
 - cert-manger.tf: needed when using TLS with nginx controller to generate certs using cert-manager to encrypt the traffic
+
+## Connecting with AWS
+Export keys, also the session id if MFA is enabled:
+
+```bash
+export AWS_ACCESS_KEY_ID=<Get it from the AWS account>
+export AWS_SECRET_ACCESS_KEY=<Get it from the AWS account>
+export AWS_SESSION_TOKEN=<For MFA based accounts>
+
+```
+Similar to `oc login` run the below command to get caller identity
+```commandline
+aws sts get-caller-identity
+```
+Update the kubeconfig:
+```commandline
+aws eks update-kubeconfig --region us-east-2 --name staging-demo
+```
 
 ## Debugging
 # Terraform
@@ -72,6 +91,12 @@ terraform state show aws_eks_pod_identity_association.cluster_autoscaler
 ```
 You an replace `aws_eks_pod_identity_association.cluster_autoscaler` with any other resource to view the details.
 
+- Targeting resources
+```bash
+terraform destroy -target=aws_eks_addon.pod_identity # resource.name
+terraform apply -target=aws_eks_addon.pod_identity
+```
+
 ## EKS additional charts
 Repo: https://github.com/aws/eks-charts/tree/master/stable
 It has all the details including the configuration.
@@ -85,3 +110,8 @@ To create your own image for the test app, run
 docker buildx build -t image:tag . --platform=linux/amd64
 ```
 Push to dockerhub to use it in the deployment
+
+## Some best practices followed
+- Used `depends_on` to handle dependencies that terraform doesn't know, eg: nginx depends on lbc since the latter is needed
+to create a load balancer. If I were to remove `lbc`, `nginx` will also get removed though so must be used with caution.
+- Used `postcondition` to check resources.

@@ -22,20 +22,20 @@ metadata:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: myapp
+  name: demoapp
   namespace: 9-example
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: myapp
+      app: demoapp
   template:
     metadata:
       labels:
-        app: myapp
+        app: demoapp
     spec:
       containers:
-        - name: myapp
+        - name: demoapp
           image: prabhjotbawa/testapp:0.0.1
           ports:
             - name: http
@@ -51,7 +51,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: myapp
+  name: demoapp
   namespace: 9-example
 spec:
   type: ClusterIP
@@ -59,12 +59,12 @@ spec:
     - port: 8080
       targetPort: http
   selector:
-    app: myapp
+    app: demoapp
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: myapp
+  name: demoapp
   namespace: 9-example
   annotations:
     cert-manager.io/cluster-issuer: http-01-production # points to the cluster issuer
@@ -78,7 +78,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: myapp
+                name: demoapp
                 port:
                   number: 8080
   tls: # needed for https connection, secret created and gets mounted in the nginx controller to terminate TLS connections
