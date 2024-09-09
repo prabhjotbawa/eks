@@ -22,6 +22,8 @@ resource "aws_iam_role_policy_attachment" "eks" {
   role       = aws_iam_role.eks.name
 }
 
+# Installs control plane managed by AWS, highly scalable
+# Two API server (control plane) nodes and three etcd nodes across three Availability Zones
 resource "aws_eks_cluster" "eks" {
   name     = "${local.env}-${local.eks_name}"
   version  = local.eks_version
@@ -37,7 +39,7 @@ resource "aws_eks_cluster" "eks" {
     ]
   }
 
-  # enabled_cluster_log_types = [control-plane, cloudwatch] Pushes logs to cloudwatch
+  # enabled_cluster_log_types = [api, audit] Pushes logs to cloudwatch
 
   access_config {
     authentication_mode                         = "API"
