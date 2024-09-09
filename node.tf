@@ -23,6 +23,7 @@ resource "aws_iam_role_policy_attachment" "amazon_eks_worker_node_policy" {
   role       = aws_iam_role.nodes.name
 }
 
+# Assign IP from VPC to the pods
 resource "aws_iam_role_policy_attachment" "amazon_eks_cni_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
   role       = aws_iam_role.nodes.name
@@ -33,6 +34,8 @@ resource "aws_iam_role_policy_attachment" "amazon_ec2_container_registry_read_on
   role       = aws_iam_role.nodes.name
 }
 
+# Installs Amazon managed nodes
+# Tutorial to create self managed nodes: https://medium.com/@nabil.abdi/how-to-create-a-self-managed-kubernetes-cluster-in-aws-manually-e79babffeb9c
 resource "aws_eks_node_group" "general" {
   cluster_name    = aws_eks_cluster.eks.name
   version         = local.eks_version

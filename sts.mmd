@@ -1,0 +1,11 @@
+sequenceDiagram
+    participant EKS as EKS Service
+    participant STS as AWS STS
+    participant IAM as IAM Role
+    participant AWS as AWS Resources
+
+    EKS->>STS: Request to AssumeRole
+    STS->>IAM: Check if EKS can assume role
+    IAM->>STS: Allow role assumption
+    STS->>EKS: Provide temporary credentials
+    EKS->>AWS: Use temp credentials to access resources

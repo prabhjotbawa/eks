@@ -37,6 +37,7 @@ to be simpler and a good replacement.
 A word about [pod identity association](pod_indentity_association.md) and also a good explanation from AWS docs can be found [here](https://aws.amazon.com/blogs/containers/amazon-eks-pod-identity-a-new-way-for-applications-on-eks-to-obtain-iam-credentials/)
 Control plane logs are not enabled by default, however can be enabled by setting it in `eks.tf`
 - cert-manger.tf: needed when using TLS with nginx controller to generate certs using cert-manager to encrypt the traffic
+- storage: ebs (ReadWriteOnce), efs (ReadWriteMany) - can be used to write data concurrently
 
 ## Connecting with AWS
 Export keys, also the session id if MFA is enabled:
@@ -115,3 +116,97 @@ Push to dockerhub to use it in the deployment
 - Used `depends_on` to handle dependencies that terraform doesn't know, eg: nginx depends on lbc since the latter is needed
 to create a load balancer. If I were to remove `lbc`, `nginx` will also get removed though so must be used with caution.
 - Used `postcondition` to check resources.
+
+## A note about IAM roles
+Throughout we use IAM roles for specific operations to implement the rule of least privilege. IAM roles use temporary tokens
+so they are more secure in an event if the token got leaked. Let's take the example of the IAM role of [eks](./eks.tf)
+Important aspects of the role:
+Assume Role Policy:
+The assume_role_policy attribute defines who or what can assume this role. It's written in JSON format.
+Policy details:
+a. "Version": "2012-10-17" - This is a standard version number for AWS IAM policy documents.
+b. "Statement": This contains an array of policy statements. In this case, there's only one statement.
+c. The statement details:
+
+"Effect": "Allow" - This statement allows the specified action.
+"Action": "sts:AssumeRole" - The allowed action is to assume this role.
+"Principal": { "Service": "eks.amazonaws.com" } - This specifies who can assume the role. In this case, it's the EKS service.
+
+
+HEREDOC Syntax:
+The <<POLICY and POLICY at the end are using Terraform's heredoc syntax to include a multi-line string.
+
+What this role does:
+This IAM role is specifically created for Amazon EKS (Elastic Kubernetes Service). It allows the EKS service to assume this role, which is a crucial part of setting up an EKS cluster.
+When an EKS cluster is created, AWS needs permissions to create and manage resources on our (or the logged on user's) behalf (like EC2 instances, security groups, etc.). This role provides the trust relationship that allows EKS to do that.
+
+### What's STS??
+
+The "sts" in "sts:AssumeRole" refers to AWS Security Token Service (STS). Further explanation:
+
+AWS Security Token Service (STS):
+STS is a web service that enables you to request temporary, limited-privilege credentials for AWS Identity and Access Management (IAM) users or for users that are authenticated (federated users).
+I am authenticated using the `admin` user token. However I don't want to use that with EKS so we use STS instead.
+
+AssumeRole Action:
+"AssumeRole" is one of the primary actions provided by STS. When we assume a role, STS returns temporary security credentials that we can use to access AWS resources that we might not normally have access to.
+How it works in this context:
+In the above IAM role, "sts:AssumeRole" is allowing the EKS service (eks.amazonaws.com) to assume this role. This means:
+a. When AWS needs to perform actions on behalf of the EKS cluster, it uses STS to assume this role.
+b. STS provides temporary credentials that allow EKS to act with the permissions granted to this role.
+c. This process happens automatically in the background when EKS needs to create or manage resources for your cluster.
+Why use STS:
+
+Security: It allows for fine-grained, temporary access without needing to create and manage long-term credentials.
+Flexibility: It enables cross-account access and federation with external identity providers.
+Principle of least privilege: Services or users can get only the permissions they need, when they need them.
+
+
+Other common STS actions:
+
+AssumeRoleWithWebIdentity: Used for web identity federation
+AssumeRoleWithSAML: Used with SAML-based federation
+GetSessionToken: Used to get temporary credentials for an IAM user
+
+A simple [diagram](sts.mmd) to illustrate how STS works in this context:
+
+1. EKS service requests to assume the role from STS.
+2. STS checks with the IAM role to see if EKS is allowed to assume it.
+3. The IAM role (configured as we saw earlier) allows this.
+4. STS provides temporary credentials to EKS.
+5. EKS can then use these credentials to access necessary AWS resources.
+
+The actual permissions which EKS can perform are defined in the `resource "aws_iam_role_policy_attachment" "eks` resource. IAM role is to
+define the trust relationship. Here we the permissions defined in `arn:aws:iam::aws:policy/AmazonEKSClusterPolicy`. See below:
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:CreateTags",
+                "ec2:DescribeInstances",
+                "ec2:DescribeRouteTables",
+                "ec2:DescribeSecurityGroups",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeVolumes",
+                "ec2:DescribeVpcs",
+                "eks:DescribeCluster",
+                "elasticloadbalancing:DescribeLoadBalancers",
+                "elasticloadbalancing:DescribeTargetGroups",
+                "elasticloadbalancing:DescribeTargetHealth"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+This policy allows EKS to:
+
+1. Describe (view) various EC2 resources like instances, route tables, security groups, etc.
+2. Create tags on EC2 resources.
+3. Describe its own cluster.
+4. View information about Elastic Load Balancers.
+
+It doesn't include permissions to modify or delete these resources, adhering to the principle of least privilege.
