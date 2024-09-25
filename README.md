@@ -34,7 +34,7 @@ using the same load balancer
 components like load balancer, cluster auto scaler can use pod identity association to authenticate themselves with other AWS
 services like EC2, ELB using the service accounts associated with an IAM role however pod identity association is newer and seems 
 to be simpler and a good replacement.
-A word about [pod identity association](pod_indentity_association.md) and also a good explanation from AWS docs can be found [here](https://aws.amazon.com/blogs/containers/amazon-eks-pod-identity-a-new-way-for-applications-on-eks-to-obtain-iam-credentials/)
+A word about [pod identity association](../../gitprojects/interview/pod_indentity_association.md) and also a good explanation from AWS docs can be found [here](https://aws.amazon.com/blogs/containers/amazon-eks-pod-identity-a-new-way-for-applications-on-eks-to-obtain-iam-credentials/)
 Control plane logs are not enabled by default, however can be enabled by setting it in `eks.tf`
 - cert-manger.tf: needed when using TLS with nginx controller to generate certs using cert-manager to encrypt the traffic
 - storage: ebs (ReadWriteOnce), efs (ReadWriteMany) - can be used to write data concurrently
@@ -54,7 +54,7 @@ aws sts get-caller-identity
 ```
 Update the kubeconfig:
 ```commandline
-aws eks update-kubeconfig --region us-east-2 --name staging-demo
+aws eks update-kubeconfig --region us-east-2 --name staging-mydemocluster
 ```
 
 ## Debugging
@@ -134,7 +134,7 @@ c. The statement details:
 
 
 HEREDOC Syntax:
-The <<POLICY and POLICY at the end are using Terraform's heredoc syntax to include a multi-line string.
+The <<POLICY and POLICY at the end are using Terraform heredoc syntax to include a multi-line string.
 
 What this role does:
 This IAM role is specifically created for Amazon EKS (Elastic Kubernetes Service). It allows the EKS service to assume this role, which is a crucial part of setting up an EKS cluster.
@@ -146,15 +146,15 @@ The "sts" in "sts:AssumeRole" refers to AWS Security Token Service (STS). Furthe
 
 AWS Security Token Service (STS):
 STS is a web service that enables you to request temporary, limited-privilege credentials for AWS Identity and Access Management (IAM) users or for users that are authenticated (federated users).
-I am authenticated using the `admin` user token. However I don't want to use that with EKS so we use STS instead.
+I am authenticated using the `admin` user token. However, I don't want to use that with EKS, so we use STS instead.
 
 AssumeRole Action:
 "AssumeRole" is one of the primary actions provided by STS. When we assume a role, STS returns temporary security credentials that we can use to access AWS resources that we might not normally have access to.
 How it works in this context:
 In the above IAM role, "sts:AssumeRole" is allowing the EKS service (eks.amazonaws.com) to assume this role. This means:
-a. When AWS needs to perform actions on behalf of the EKS cluster, it uses STS to assume this role.
-b. STS provides temporary credentials that allow EKS to act with the permissions granted to this role.
-c. This process happens automatically in the background when EKS needs to create or manage resources for your cluster.
+1. When AWS needs to perform actions on behalf of the EKS cluster, it uses STS to assume this role.
+2. STS provides temporary credentials that allow EKS to act with the permissions granted to this role.
+3. This process happens automatically in the background when EKS needs to create or manage resources for your cluster.
 Why use STS:
 
 Security: It allows for fine-grained, temporary access without needing to create and manage long-term credentials.
@@ -210,3 +210,8 @@ This policy allows EKS to:
 4. View information about Elastic Load Balancers.
 
 It doesn't include permissions to modify or delete these resources, adhering to the principle of least privilege.
+
+## TO DO
+Figure out why nginx service (load balancer) deletion doesn't remove the LB.
+Workaround: Remove the `nginx-service-controller` resource and run `terraform destroy`
+This can be automated to query the resource, remove it before running the `terraform destroy` command.
