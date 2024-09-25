@@ -34,13 +34,50 @@ resource "aws_iam_role_policy_attachment" "amazon_ec2_container_registry_read_on
   role       = aws_iam_role.nodes.name
 }
 
+# Specify storage
+resource "aws_launch_template" "eks_nodes" {
+  count = local.enable_storage ? 1:0
+
+  name = "eks-node-template"
+
+  # Setting to true will provide additional metrics like container insights however
+  # cloud watch agent is required to send them over to Cloudwatch.
+  monitoring {
+    enabled = false
+  }
+
+  block_device_mappings {
+    device_name = "/dev/xvda"
+
+    ebs {
+      volume_size = 20
+      volume_type = "gp3"
+      encrypted   = true
+    }
+  }
+
+  # Other launch template configurations...
+}
+
 # Installs Amazon managed nodes
+# If node increase, they will automatically get created in a different subnet, similar to multiple replica sets in k8s
 # Tutorial to create self managed nodes: https://medium.com/@nabil.abdi/how-to-create-a-self-managed-kubernetes-cluster-in-aws-manually-e79babffeb9c
 resource "aws_eks_node_group" "general" {
   cluster_name    = aws_eks_cluster.eks.name
   version         = local.eks_version
   node_group_name = "general"
   node_role_arn   = aws_iam_role.nodes.arn
+
+
+  # We skip this by default
+  # AWS associates a default EBS volume gp2/20Gib if this block is skipped
+  dynamic "launch_template" {
+    for_each = local.enable_storage ? [1]: []
+    content {
+      id      = aws_launch_template.eks_nodes[0].id
+      version = "$Latest"
+    }
+  }
 
   subnet_ids = [
     aws_subnet.private_zone1.id,

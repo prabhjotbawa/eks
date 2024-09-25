@@ -6,4 +6,5 @@ locals {
   eks_name    = "mydemocluster"
   eks_version = "1.29"
   pod_id_chk  = false
+  enable_storage = false
 }
