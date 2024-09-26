@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-sample
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx-sample
+  template:
+    metadata:
+      labels:
+        app: nginx-sample
+    spec:
+      containers:
+      - name: nginx
+        image: my-nginx-sample:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-sample-service
+spec:
+  selector:
+    app: nginx-sample
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP # We will use NGINX controller/Ingress (see below) to expose and reuse the same load balancer
+---
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-nginx-app
+  annotations:
+    cert-manager.io/cluster-issuer: http-01-production
+spec:
+  ingressClassName: external-nginx
+  rules:
+    - host: app.prabhjotbawa.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx-sample
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - app.prabhjotbawa.com
+      secretName: app-prabhjotbawa-com
