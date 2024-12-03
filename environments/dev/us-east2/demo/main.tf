@@ -1,5 +1,7 @@
-locals {
-  env         = "staging"
+module "eks_cluster" {
+  source = "../../../../modules/cluster"
+
+  env         = "dev"
   region      = "us-east-2"
   zone1       = "us-east-2a"
   zone2       = "us-east-2b"

@@ -10,10 +10,13 @@ libraries, helm charts
 2 of them to route traffic in/out of the cluster
 1) Private -> Routes traffic from the NAT to the IGW for downloading packages from the internet, connected with private subnet
 2) Public -> Routes traffic from the IGW to the load balancer to communicate with ingress.
+The default route is keeps traffic in the VPC so we create routes for EC2 instances to communicate with internet gateway when 
+the request's destination is outside VPC. The NAT routes is associated with the private subnets and routes requests to internet
+via the IGW.
 - Load balancer routes traffic to nginx controller pod which interacts with cert manager to secure traffic
 
 ## Files
-- locals.tf: local variables
+Location: modules/cluster
 - vpc.tf: creates a VPC to run the EKS and other components like NAT GW, IGW, load balancers etc
 - subnets.tf: creates private and public subnets for both the availability zones
 - igw.tf: creates an `igw` for the vpc
@@ -34,10 +37,13 @@ using the same load balancer
 components like load balancer, cluster auto scaler can use pod identity association to authenticate themselves with other AWS
 services like EC2, ELB using the service accounts associated with an IAM role however pod identity association is newer and seems 
 to be simpler and a good replacement.
-A word about [pod identity association](../../gitprojects/interview/pod_indentity_association.md) and also a good explanation from AWS docs can be found [here](https://aws.amazon.com/blogs/containers/amazon-eks-pod-identity-a-new-way-for-applications-on-eks-to-obtain-iam-credentials/)
-Control plane logs are not enabled by default, however can be enabled by setting it in `eks.tf`
+A good explanation from AWS docs can be found [here](https://aws.amazon.com/blogs/containers/amazon-eks-pod-identity-a-new-way-for-applications-on-eks-to-obtain-iam-credentials/)
+Control plane logs are not enabled by default, however, can be enabled by setting it in `eks.tf`
 - cert-manger.tf: needed when using TLS with nginx controller to generate certs using cert-manager to encrypt the traffic
-- storage: ebs (ReadWriteOnce), efs (ReadWriteMany) - can be used to write data concurrently
+- ebs-csi-driver.tf: Most cases use ebs (ReadWriteOnce), however, efs (ReadWriteMany) can be used to write data concurrently to support
+use cases where concurrent writes are required.
+PVC's should be used when data needs to be persisted across Nodes however a storage provisioner is required to create the volumes
+so we install it. This [diagram](storage.mmd) also shows the lifecycle of PVC/PV in relation to `retain` policy parameter.
 
 ## Connecting with AWS
 Export keys, also the session id if MFA is enabled:
@@ -119,7 +125,7 @@ to create a load balancer. If I were to remove `lbc`, `nginx` will also get remo
 
 ## A note about IAM roles
 Throughout we use IAM roles for specific operations to implement the rule of least privilege. IAM roles use temporary tokens
-so they are more secure in an event if the token got leaked. Let's take the example of the IAM role of [eks](./eks.tf)
+so they are more secure in an event if the token got leaked. Let's take the example of the IAM role of [eks](./modules/cluster/eks.tf)
 Important aspects of the role:
 Assume Role Policy:
 The assume_role_policy attribute defines who or what can assume this role. It's written in JSON format.
@@ -210,6 +216,29 @@ This policy allows EKS to:
 4. View information about Elastic Load Balancers.
 
 It doesn't include permissions to modify or delete these resources, adhering to the principle of least privilege.
+
+## Using S3 bucket as statefile
+I have put all the necessary files to create the EKS cluster in the [module](./modules/cluster)
+To create infra per environments, I have created a demo folder to create infra for a test cluster.
+To create other environments, one would create a folder and copy the contents. The only file needed to change is the `main.tf`
+file to set the environment variables.
+To use S3 as the statefile, we need to set a few env vars. There is a [script](./environments/dev/us-east2/demo/setenv.sh)
+that can be run to initialize the terraform backend. As an example for the demo env, I would run the below:
+```commandline
+cd environments/dev/us-east2/demo
+sh setenv.sh dev mydemocluster us-east-2
+```
+The format is `sh setenv.sh ENVIRONMENT CLUSTER_NAME REGION`
+The above values can also be found from the `main.tf` file and should be same as the values setup
+
+The bucket can be created running another terraform module. 
+An example for the above environment is also shown [here](environments/dev/us-east2/demo/statefile)
+Set the parameters in the `main.tf` file and run it.
+```commandline
+cd /environments/dev/us-east2/demo/statefile
+terraform init
+terraform apply -y
+```
 
 ## TO DO
 Figure out why nginx service (load balancer) deletion doesn't remove the LB.

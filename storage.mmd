@@ -1,0 +1,12 @@
+flowchart TD
+    A[PersistentVolume] --> B{Reclaim Policy}
+    B -->|Retain| C[Keep PV and data]
+    B -->|Delete| D[Delete PV and data]
+    B -->|Recycle| E[Delete data, keep PV]
+
+    F[PersistentVolumeClaim] --> G{Storage Class}
+    G -->|Dynamic Provisioning| H[Provisioner creates PV]
+    G -->|Static Provisioning| I[Admin creates PV]
+
+    H --> B
+    I --> B

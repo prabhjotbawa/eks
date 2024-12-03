@@ -21,7 +21,7 @@ data "aws_iam_policy_document" "aws_lbc" { # We can also use data resource to de
 
 # Can be found at: https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json
  resource "aws_iam_policy" "aws_lbc" {
-   policy = file("./iam/AWSLoadBalancerController.json")
+   policy = file("${path.module}/iam/AWSLoadBalancerController.json")
    name   = "AWSLoadBalancerController"
  }
 
@@ -60,8 +60,8 @@ data "aws_iam_policy_document" "aws_lbc" { # We can also use data resource to de
 
 # Just to add as a check and show the usage of modules
 module "eks_pod_identity_checker_lbc"{
-  count = local.pod_id_chk ? 1:0
+  count = var.pod_id_chk ? 1:0
 
-  source = "./modules/eks-pod-identity-check"
+  source = "../eks-pod-identity-check"
   cluster_name = aws_eks_cluster.eks.name
 }
