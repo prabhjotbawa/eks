@@ -92,15 +92,15 @@ resource "aws_iam_role" "cluster_autoscaler" {
    # MUST be updated to match your region
    set {
      name  = "awsRegion"
-     value = local.region
+     value = var.region
    }
 
    depends_on = [helm_release.metrics_server]
  }
 
 module "eks_pod_identity_checker_scaler"{
-  count = local.pod_id_chk ? 1:0
+  count = var.pod_id_chk ? 1:0
 
-  source = "./modules/eks-pod-identity-check"
+  source = "../eks-pod-identity-check"
   cluster_name = aws_eks_cluster.eks.name
 }

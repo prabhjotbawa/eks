@@ -1,5 +1,5 @@
 provider "aws" {
-  region = local.region
+  region = var.region
 }
 
 terraform {
@@ -11,4 +11,5 @@ terraform {
       version = "~> 5.49"
     }
   }
+
 }
