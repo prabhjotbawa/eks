@@ -217,7 +217,7 @@ This policy allows EKS to:
 
 It doesn't include permissions to modify or delete these resources, adhering to the principle of least privilege.
 
-## Using S3 bucket as statefile
+## Manage cluster creation for different environments, use S3 as statefile
 I have put all the necessary files to create the EKS cluster in the [module](./modules/cluster)
 To create infra per environments, I have created a demo folder to create infra for a test cluster.
 To create other environments, one would create a folder and copy the contents. The only file needed to change is the `main.tf`
