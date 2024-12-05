@@ -3,16 +3,14 @@
 set -e
 
 echo "Please enter the values similar to the ones entered when creating the S3 bucket"
+echo "Values can be passed as show below:"
+echo "sh setenv.sh test test us-east-2"
+echo "Defaults are set if nothing is passed\n\n"
 
-echo -n "What's the environment: Choose from dev,test or prod"
-read -r CLUSTER_ENV
-echo -n "What's the cluster name: Eg:- mydemocluster"
-read -r CLUSTER_NAME
-#export CLUSTER_ENV=$1
-#export CLUSTER_NAME=$2
-echo -n "What's the region name: Eg:- us-east-2"
-read -r REGION
-#export REGION=$3
+CLUSTER_ENV=${1:-dev}
+CLUSTER_NAME=${2:-mydemocluster}
+REGION=${3:-us-east-2}
+
 export BUCKET=terraform-state-$CLUSTER_ENV-$CLUSTER_NAME
 export KEY=terraform-$CLUSTER_ENV-$CLUSTER_NAME.tfstate
 export DYNAMODB_TBL=terraform-state-lock-$CLUSTER_ENV-$CLUSTER_NAME

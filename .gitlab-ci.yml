@@ -50,15 +50,19 @@ Run Script:
 Provision Infra:
   <<: *test_template
   image: $CI_REGISTRY_IMAGE:$IMAGE_TAG
-  stage: Release
+  stage: Test
   rules: *release_rules
   variables:
     AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
     AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
 
   script:
-    - cd ./environments/dev/us-east-2/demo
+    - cd ./environments/dev/us-east-2/demo/statefile
     - terraform init
-    - terraform plan -out=tfplan -input=false
-    - terraform show -json tfplan
+    - terraform apply -auto-approve -lock=false
+    - cd ..
+    - sh setenv.sh
+    - terraform plan
+    - cd statefile
+    - terraform destroy -auto-approve -lock=false
 
