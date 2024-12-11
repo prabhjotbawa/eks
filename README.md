@@ -226,9 +226,11 @@ To use S3 as the statefile, we need to set a few env vars. There is a [script](.
 that can be run to initialize the terraform backend. As an example for the demo env, I would run the below:
 ```commandline
 cd environments/dev/us-east2/demo
-sh setenv.sh dev mydemocluster us-east-2
+sh setenv.sh
 ```
-The format is `sh setenv.sh ENVIRONMENT CLUSTER_NAME REGION`
+`CLUSTER_ENV`, `CLUSTER_NAME`, `REGION` must be exported or they will get defaulted to:
+`dev`, `mydemocluster`, `us-east-2`.
+
 The above values can also be found from the `main.tf` file and should be same as the values setup
 
 The bucket can be created running another terraform module. 
