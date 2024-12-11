@@ -7,9 +7,9 @@ echo "Values can be passed as show below:"
 echo "sh setenv.sh test test us-east-2"
 echo "Defaults are set if nothing is passed\n\n"
 
-CLUSTER_ENV=${1:-dev}
-CLUSTER_NAME=${2:-mydemocluster}
-REGION=${3:-us-east-2}
+CLUSTER_ENV=${CLUSTER_ENV:-dev}
+CLUSTER_NAME=${CLUSTER_NAME:-mydemocluster}
+REGION=${REGION:-us-east-2}
 
 export BUCKET=terraform-state-$CLUSTER_ENV-$CLUSTER_NAME
 export KEY=terraform-$CLUSTER_ENV-$CLUSTER_NAME.tfstate
